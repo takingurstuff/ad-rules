@@ -21,18 +21,26 @@ jobs:
           cd ..
 
       - name: Download AdGuard Filter
-        run: curl -Lo blocklist https://raw.githubusercontent.com/ppfeufer/adguard-filter-list/refs/heads/master/blocklist
+        run: |
+          rm ./blocklist
+          curl -Lo blocklist https://raw.githubusercontent.com/ppfeufer/adguard-filter-list/refs/heads/master/blocklist
 
       - name: Compile to SRS
         run: |
+          rm ./ads.srs
           .tmp/sing-box-*/sing-box rule-set convert --type adguard -o ads.srs blocklist
 
       - name: Commit and Push if changed
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add ads.srs
-          git add blocklist
-          git commit -m "Update rules: $(date +%Y-%m-%d)"
-          git push
+          git add ads.srs blocklist
+          
+          # Check if there are any staged changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update rules: $(date +%Y-%m-%d)"
+            git push
+          fi
 
