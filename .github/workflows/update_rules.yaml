@@ -1,0 +1,37 @@
+name: Update Sing-Box Rules
+on:
+  schedule:
+    - cron: '0 4 * * *' # Runs daily at 2 AM
+  workflow_dispatch:    # Allows you to trigger it manually for testing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+
+      - name: Install sing-box
+        run: |
+          mkdir .tmp
+          cd .tmp
+          curl -Lo sing-box.tar.gz "https://github.com/SagerNet/sing-box/releases/latest/download/sing-box-$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .tag_name | sed 's/v//')-linux-amd64.tar.gz"
+          tar -xzf sing-box.tar.gz
+          rm ./sing-box.tar.gz
+          export SING_BOX_DIR_NAME $(ls)
+          cd ..
+
+      - name: Download AdGuard Filter
+        run: curl -Lo blocklist https://raw.githubusercontent.com/ppfeufer/adguard-filter-list/refs/heads/master/blocklist
+
+      - name: Compile to SRS
+        run: |
+          .tmp/$SING_BOX_DIR_NAME/sing-box rule-set convert --type adguard -o adguard.srs blocklist
+
+      - name: Commit and Push if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add ads.srs
+          git commit -m "Update rules: $(date +%Y-%m-%d)" $$ git push
+
